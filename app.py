@@ -49,38 +49,10 @@ def init_db():
         c.execute("INSERT INTO settings(key, value) VALUES('panel_name', 'RICH')")
     c.commit(); c.close()
 
-def get_setting(key):
-    c = sqlite3.connect(DB)
-    row = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
-    c.close()
-    return row[0] if row else ""
-
-def set_setting(key, val):
-    c = sqlite3.connect(DB)
-    c.execute("INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)", (key, val))
-    c.commit(); c.close()
-
-def gen_ref():
-    while True:
-        code = "RICH-" + ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-        c = sqlite3.connect(DB)
-        if not c.execute("SELECT 1 FROM users WHERE referral_code=?", (code,)).fetchone():
-            c.close(); return code
-        c.close()
-
 def get_user(u):
     c = sqlite3.connect(DB); c.row_factory = sqlite3.Row
     r = c.execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
     c.close(); return dict(r) if r else None
-
-def update_wallet(u, amt):
-    c = sqlite3.connect(DB)
-    row = c.execute("SELECT is_admin,wallet FROM users WHERE username=?", (u,)).fetchone()
-    if not row: c.close(); return False
-    if row[0] == 1: c.close(); return True
-    if row[1] + amt < 0: c.close(); return False
-    c.execute("UPDATE users SET wallet=wallet+? WHERE username=?", (amt, u))
-    c.commit(); c.close(); return True
 
 init_db()
 
@@ -94,6 +66,7 @@ try:
     ev = None
     last_result_id = None
 
+    # ✅ SAARE 26 COMMANDS YAHAN HAIN
     MENU = [
         ("🔍 Num Lookup", "🔍 Num Lookup", "10 Digit Mobile..."),
         ("🧠 TG ID ➔ Num", "🧠 TG ID ➔ Num", "Telegram ID..."),
@@ -132,12 +105,11 @@ try:
         if not msg: return ""
         return msg.raw_text or msg.text or ""
 
-    # ✅ File & Text Extraction
     def extract_result(msg):
         if not msg: return {"text": "", "file": None}
         text = extract_text(msg)
         
-        # Agar target bot file ya photo bhejta hai
+        # ✅ File/PDF/HTML Capture Logic
         if msg.document or msg.photo:
             return {"text": text, "file": f"/download/{msg.chat_id}/{msg.id}"}
 
@@ -251,7 +223,7 @@ except Exception as e:
 app = Flask(__name__)
 app.secret_key = "rich_secret_123_change_me"
 
-# ✅ DOWNLOAD FILE ROUTE (PDF / HTML / IMAGE)
+# ✅ DOWNLOAD FILE ROUTE (Yahan se PDF/HTML download hoga)
 @app.route('/download/<int:chat_id>/<int:msg_id>')
 def download_file(chat_id, msg_id):
     if 'user' not in session: 
@@ -333,7 +305,7 @@ button:hover{transform:scale(1.02);}
     <div class="link"><a href="/forgot">Forgot password?</a> <a href="/signup">Create Account</a></div>
 </div></body></html>"""
 
-# ✅ UPDATED DASHBOARD (Top Space Added + Owner Control + PDF Fix)
+# ✅ UPDATED DASHBOARD (Top Space Added + Owner Control + PDF Fix + No Redeem Code)
 DASHBOARD = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RICH OSINT</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
