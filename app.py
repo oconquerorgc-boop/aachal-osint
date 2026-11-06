@@ -248,7 +248,6 @@ except Exception as e:
 app = Flask(__name__)
 app.secret_key = "rich_secret_123_change_me"
 
-# ✅ DOWNLOAD ROUTE (PDF/HTML FIX)
 @app.route('/download/<int:chat_id>/<int:msg_id>')
 def download_file(chat_id, msg_id):
     if 'user' not in session: 
@@ -330,11 +329,9 @@ button:hover{transform:scale(1.02);}
     <div class="link"><a href="/forgot">Forgot password?</a> <a href="/signup">Create Account</a></div>
 </div></body></html>"""
 
-# ✅ NAYA DASHBOARD (Top Space + Pagination + PDF Fix, No Owner Control)
 DASHBOARD = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RICH OSINT</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
-/* 🔴 TOP SPACE ADDED */
 body{background:#050505;color:#fff;padding:50px 15px 15px 15px;min-height:100vh;}
 
 .card{background:#111;border:1px solid #ff3333;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 0 15px rgba(255,51,51,0.1);}
@@ -349,7 +346,6 @@ body{background:#050505;color:#fff;padding:50px 15px 15px 15px;min-height:100vh;
 .grid button{padding:14px 5px;background:#0a0a0a;border:1px solid #333;color:#ddd;border-radius:8px;cursor:pointer;font-size:13px;font-weight:bold;transition:0.2s;}
 .grid button:hover{border-color:#ff3333;color:#fff;box-shadow:0 0 10px rgba(255,51,51,0.3);}
 
-/* Pagination Next/Back */
 .page-btns{display:flex;justify-content:space-between;margin-top:15px;}
 .page-btns button{background:linear-gradient(90deg, #ff3333, #ff6600);color:#fff;border:none;padding:10px 25px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;}
 
@@ -368,4 +364,202 @@ const itemsPerPage = 12;
 const allMenus = """ + str([{"label": d, "cmd": a} for d, a, p in MENU]) + """;
 
 function renderMenu() {
-   
+    let grid = document.getElementById('menu-grid');
+    let btns = document.getElementById('page-btns');
+    let start = currentPage * itemsPerPage;
+    let end = start + itemsPerPage;
+    let pageItems = allMenus.slice(start, end);
+    
+    let html = "";
+    pageItems.forEach(item => {
+        html += `<button onclick="doSearch('${item.cmd}', this)">${item.label}</button>`;
+    });
+    grid.innerHTML = html;
+    
+    let btnHtml = "";
+    if(currentPage > 0) btnHtml += `<button onclick="prevPage()">⬅ Back</button>`;
+    else btnHtml += `<div></div>`; 
+    
+    if(end < allMenus.length) btnHtml += `<button onclick="nextPage()">Next ➔</button>`;
+    
+    btns.innerHTML = btnHtml;
+}
+
+function nextPage() { currentPage++; renderMenu(); }
+function prevPage() { currentPage--; renderMenu(); }
+
+async function doSearch(cmd, btn) {
+    let val = document.getElementById('query').value;
+    if(!val) return alert('⚠️ Please enter a value to search!');
+    
+    let box = document.getElementById('result');
+    box.innerHTML = "<div class='loader'>⏳ Fetching Data from Server...</div>";
+    
+    let originalText = btn.innerHTML;
+    btn.innerHTML = "⏳";
+    btn.disabled = true;
+    
+    try {
+        let res = await fetch('/api/search', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({cmd: cmd, query: val})
+        });
+        let data = await res.json();
+        
+        if(data.status === 'success') {
+            let html = data.text ? `<div style="color:#fff;">${data.text}</div>` : '<div style="color:#888;">No text data found.</div>';
+            if(data.file) {
+                html += `<br><a href="${data.file}" target="_blank" style="display:block; text-align:center; background:linear-gradient(90deg,#00b09b,#96c93d); color:#fff; padding:12px; border-radius:8px; text-decoration:none; font-weight:bold; margin-top:10px;">📥 DOWNLOAD FILE / PDF</a>`;
+            }
+            box.innerHTML = html;
+        } else {
+            box.innerHTML = "<div style='color:#ff3333;'>❌ " + data.message + "</div>";
+        }
+    } catch(e) {
+        box.innerHTML = "<div style='color:#ff3333;'>❌ Network Error!</div>";
+    }
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+}
+window.onload = renderMenu;
+</script>
+</head><body>
+
+<div class="card">
+    <h1>⚡ <span>RICH</span> OSINT ⚡</h1>
+    <p>₹100/SEARCH • FAST & SECURE</p>
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Enter value (Number, Aadhaar, Vehicle)...">
+        <button onclick="doSearch('📁 Num ➔ All Info', this)">Search</button>
+    </div>
+</div>
+
+<div class="grid" id="menu-grid">
+</div>
+<div class="page-btns" id="page-btns"></div>
+
+<div class="res-box" id="result">> System Ready...<br>> Select a command and enter query to start.</div>
+
+<div class="footer">
+    POWERED BY RICH • MY REF: RICH-ADMIN1
+</div>
+
+</body></html>"""
+
+SIGNUP = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
+body{color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
+body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:-1;}
+.box{background: rgba(15,15,15,0.95);padding:30px 25px;border-radius:16px;max-width:400px;width:100%;border:1px solid #ff3333;}
+h2{color:#fff;margin-bottom:20px;text-align:center;letter-spacing:2px;} h2 span{color:#ff6600;}
+.input-group{text-align:left;margin-bottom:10px;} .input-group label{font-size:11px;color:#ccc;display:block;margin-bottom:3px;}
+.input-group input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#fff;font-size:14px;}
+.input-group input:focus{border-color:#ff3333;outline:none;}
+button{width:100%;padding:14px;background: linear-gradient(90deg, #ff3333, #ff6600);color:#fff;font-weight:900;border:none;border-radius:8px;cursor:pointer;font-size:15px;margin-top:10px;}
+.error{color:#f33;font-size:13px;margin-bottom:10px;text-align:center;background:rgba(255,0,0,0.1);padding:8px;border-radius:5px;}
+.link{margin-top:15px;font-size:13px;color:#888;text-align:center;}.link a{color:#ff6600;text-decoration:none;font-weight:bold;}
+</style></head><body>
+""" + get_bg_html() + """
+<div class="box"><h2>JOIN <span>{{panel_name}}</span></h2>{% if error %}<div class="error">{{error}}</div>{% endif %}
+<form method="POST">
+    <div class="input-group"><label>FULL NAME</label><input type="text" name="name" placeholder="Full Name" required></div>
+    <div class="input-group"><label>USERNAME</label><input type="text" name="username" placeholder="Username" required></div>
+    <div class="input-group"><label>MOBILE NUMBER</label><input type="text" name="mobile" placeholder="10 Digits Mobile" pattern="[0-9]{10}" required></div>
+    <div class="input-group"><label>PASSWORD</label><input type="password" name="password" placeholder="Min 6 characters" minlength="6" required></div>
+    <div class="input-group"><label>REFERRAL CODE (Optional)</label><input type="text" name="referral" placeholder="Enter Referral Code (Optional)"></div>
+    <button type="submit">Create Account 🚀</button>
+</form>
+<div class="link">Have account? <a href="/login">Login ➜</a></div></div></body></html>"""
+
+FORGOT = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Forgot Password</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
+body{color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px;}
+body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:-1;}
+.box{background: rgba(15,15,15,0.95);padding:30px 25px;border-radius:16px;max-width:400px;width:100%;border:1px solid #ff3333;}
+h2{color:#fff;margin-bottom:20px;text-align:center;letter-spacing:2px;} h2 span{color:#ff6600;}
+.input-group{text-align:left;margin-bottom:10px;} .input-group label{font-size:11px;color:#ccc;display:block;margin-bottom:3px;}
+.input-group input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#fff;font-size:14px;}
+.input-group input:focus{border-color:#ff3333;outline:none;}
+button{width:100%;padding:14px;background: linear-gradient(90deg, #ff3333, #ff6600);color:#fff;font-weight:900;border:none;border-radius:8px;cursor:pointer;font-size:15px;margin-top:10px;}
+.error{color:#f33;font-size:13px;margin-bottom:10px;text-align:center;background:rgba(255,0,0,0.1);padding:8px;border-radius:5px;}
+.ok{color:#00e676;font-size:13px;margin-bottom:10px;text-align:center;background:rgba(0,255,102,0.1);padding:8px;border-radius:5px;}
+.link{margin-top:15px;font-size:13px;color:#888;text-align:center;}.link a{color:#ff6600;text-decoration:none;font-weight:bold;}
+</style></head><body>
+""" + get_bg_html() + """
+<div class="box"><h2>RESET <span>PASSWORD</span></h2>
+{% if error %}<div class="error">{{error}}</div>{% endif %}
+{% if msg %}<div class="ok">{{msg}}</div>{% endif %}
+<form method="POST">
+    <div class="input-group"><label>USERNAME OR MOBILE</label><input type="text" name="username" placeholder="Enter Username/Mobile" required></div>
+    <button type="submit">Reset Password 🔐</button>
+</form>
+<div class="link">Remember? <a href="/login">Login ➜</a></div></div></body></html>"""
+
+# ================= ROUTES =================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        u = request.form.get('username')
+        p = request.form.get('password')
+        user = get_user(u)
+        if user and check_password_hash(user['password_hash'], p):
+            session['user'] = u
+            return redirect(url_for('dashboard'))
+        return render_template_string(LOGIN, panel_name="RICH", error="Invalid Credentials", has_logo=os.path.exists(LOGO_FILE), time=time.time(), tg_link=TG_HELP_ID)
+    return render_template_string(LOGIN, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time(), tg_link=TG_HELP_ID)
+
+@app.route('/')
+def dashboard():
+    if 'user' not in session: return redirect(url_for('login'))
+    return render_template_string(DASHBOARD)
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        u = request.form.get('username')
+        m = request.form.get('mobile')
+        p = request.form.get('password')
+        ref = request.form.get('referral')
+        
+        c = sqlite3.connect(DB)
+        if c.execute("SELECT 1 FROM users WHERE username=?", (u,)).fetchone():
+            c.close()
+            return render_template_string(SIGNUP, panel_name="RICH", error="Username already exists!", has_logo=os.path.exists(LOGO_FILE), time=time.time())
+        
+        code = gen_ref()
+        c.execute("INSERT INTO users(name,username,mobile,password_hash,raw_password,referral_code,referred_by,wallet,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                  (name, u, m, generate_password_hash(p), p, code, ref, SIGNUP_BONUS, datetime.now().isoformat()))
+        c.commit(); c.close()
+        return redirect(url_for('login'))
+    return render_template_string(SIGNUP, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time())
+
+@app.route('/forgot', methods=['GET', 'POST'])
+def forgot():
+    if request.method == 'POST':
+        return render_template_string(FORGOT, panel_name="RICH", error="Please contact @MrRichYT for password reset.", has_logo=os.path.exists(LOGO_FILE), time=time.time())
+    return render_template_string(FORGOT, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time())
+
+@app.route('/api/search', methods=['POST'])
+def api_search():
+    if 'user' not in session: 
+        return {"status": "error", "message": "Unauthorized"}
+    
+    data = request.json
+    cmd = data.get('cmd')
+    query = data.get('query')
+    
+    with lock:
+        r = asyncio.run_coroutine_threadsafe(send_wait(cmd, query), loop).result()
+        if r:
+            res = extract_result(r)
+            return {"status": "success", "text": res["text"], "file": res["file"]}
+        return {"status": "error", "message": "Timeout or Target Bot didn't respond."}
+
+if __name__ == '__main__':
+    threading.Thread(target=run_bot, daemon=True).start()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
