@@ -1,7 +1,8 @@
 import threading, asyncio, re, sqlite3, secrets, string, os, time
 from datetime import datetime
-from flask import Flask, request, render_template_string, session, redirect, url_for, send_file
+from flask import Flask, request, render_template_string, session, redirect, url_for, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 try:
     import telebot
@@ -13,7 +14,7 @@ except ImportError:
 
 # ================= CONFIG =================
 API_ID = 37325833
-API_HASH = '8d82b6543b9631209aebf4b5e03409fc'
+API_HASH = '8d82b6543b9631209aebf4b5e03409fc' 
 SESSION_STR = '1BVtsOMMBu2tX6Ow4MSJrDU2FdzE4mWMJ3YIzpbl4SNceVpzf6v2tbkhwhuRzCwol_JnofJTw9z2bgPjRuEM4DI3Sa8ds6iAMhWZRl_pZWYbjpq4qgif3Oku5INJM_0MN6Dgamx4K4HuR88tsVIH63KdsLUgb8NatAurhzJP0kKPuwaWD6cbQKaomQgJ2T2C7gUE6s4fBPx4Vv4xKH4JNwIqeaZUourfibPvLjQ5XWxyhfe7N7iI-IBuHRq5lsagdDYcPxfuHKn9sPqRmsX8TCV_lsdZpv8OUNhJ6FvpHGWbPd5npRW0Wu6N_7TA3iYrWVodUTtg3Ql2OwfxxJfdVjlOoW2qaRc0='
 TARGET_BOT = '@Osint2_info_bot'
 BOT_TOKEN = '8666312234:AAHBQ1dt2yPElbpASleamyaJydvuhwU7B2o'
@@ -41,9 +42,6 @@ def init_db():
     if not c.execute("SELECT 1 FROM users WHERE username=?", (WEB_USER,)).fetchone():
         c.execute("INSERT INTO users(name,username,mobile,password_hash,raw_password,referral_code,wallet,is_admin,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
                   ("Admin", WEB_USER, "0000000000", generate_password_hash(WEB_PASS), WEB_PASS, "RICH-ADMIN1", 999999999, 1, datetime.now().isoformat()))
-    else:
-        c.execute("UPDATE users SET password_hash=?, raw_password=? WHERE username=?", 
-                  (generate_password_hash(WEB_PASS), WEB_PASS, WEB_USER))
     
     if not c.execute("SELECT 1 FROM settings WHERE key='panel_name'").fetchone():
         c.execute("INSERT INTO settings(key, value) VALUES('panel_name', 'RICH')")
@@ -94,6 +92,7 @@ try:
     ev = None
     last_result_id = None
 
+    # FINAL MENU WITH ALL NEW COMMANDS
     MENU = [
         ("🔍 Num Lookup", "🔍 Num Lookup", "10 Digit Mobile..."),
         ("🧠 TG ID ➔ Num", "🧠 TG ID ➔ Num", "Telegram ID..."),
@@ -106,21 +105,19 @@ try:
         ("🌐 Web Scraper", "🌐 Web Scraper", "URL..."),
         ("🚗 Vehicle ➔ Num", "🚗 Vehicle ➔ Num", "Vehicle Number..."),
         ("🏡 Vehicle Address", "🏡 Vehicle Address", "Vehicle Number..."),
-        ("📄 RC ➔ PDF", "📄 RC ➔ PDF", "Vehicle Number..."),
         ("📝 Name Info", "📝 Name Info", "Full Name..."),
         ("🆔 Aadhaar ➔ Ration", "🆔 Aadhaar ➔ Ration", "Aadhaar Number..."),
         ("💳 PAN Info", "💳 PAN Info", "PAN Number..."),
-        ("💼 PAN ➔ GST", "💼 PAN ➔ GST", "PAN Number..."),
+        ("⚪ LPG Info", "⚪ LPG Info", "LPG ID / Mobile..."),
         ("🚗 Vehicle V3", "🚗 Vehicle V3", "Vehicle Number..."),
         ("🎮 FF Info", "🎮 FF Info", "Free Fire UID..."),
-        ("📄 UPI Info", "📄 UPI Info", "UPI ID..."),
-        ("🗳️ Voter Info", "🗳️ Voter Info", "Voter ID..."),
+        ("📄 UPI Info", "📄 UPI Info", "UPI ID / Mobile..."),
+        ("📄 Voter Info", "📄 Voter Info", "Voter ID / Name..."),
         ("🚗 Vehicle to Owner", "🚗 Vehicle to Owner", "Vehicle Number..."),
         ("🐙 GitHub Info", "🐙 GitHub Info", "GitHub Username..."),
         ("👻 Snapchat Info", "👻 Snapchat Info", "Snapchat Username..."),
         ("🚨 Vehicle Challan", "🚨 Vehicle Challan", "Vehicle Number..."),
         ("📸 Challan Photo", "📸 Challan Photo", "Vehicle Number..."),
-        ("⬜ LPG Info", "⬜ LPG Info", "LPG ID..."),
     ]
 
     def main_menu():
@@ -132,23 +129,6 @@ try:
         if not msg: return ""
         return msg.raw_text or msg.text or ""
 
-    def extract_result(msg):
-        if not msg: return {"text": "", "file": None}
-        text = extract_text(msg)
-        
-        if msg.document or msg.photo:
-            return {"text": text, "file": f"/download/{msg.chat_id}/{msg.id}"}
-
-        lines = text.split('\n')
-        clean_lines = []
-        for ln in lines:
-            s = ln.strip()
-            if not s: continue
-            if "@suryaxz" in s or "COPY CODE" in s or "By :" in s: continue
-            clean_lines.append(ln)
-            
-        return {"text": "\n".join(clean_lines), "file": None}
-
     def setup_handlers():
         global ev, captured
         if ev is None: ev = asyncio.Event()
@@ -159,7 +139,7 @@ try:
             if e.sender_id == (await client.get_entity(TARGET_BOT)).id:
                 t = extract_text(e.message).lower()
                 if "fetching" in t or "wait" in t: return
-                if (len(t) > 30 and ("number" in t or "record" in t or "name" in t or "address" in t)) or e.message.document or e.message.photo:
+                if len(t) > 30 and ("number" in t or "record" in t or "name" in t or "address" in t):
                     if e.message.id != last_result_id:
                         last_result_id = e.message.id
                         captured = e.message
@@ -206,14 +186,10 @@ try:
                 r = asyncio.run_coroutine_threadsafe(send_wait(a, a), loop).result()
                 try: bot.delete_message(call.message.chat.id, msg.message_id)
                 except: pass
-                if r:
-                    res = extract_result(r)
-                    if res["text"]:
-                        bot.send_message(call.message.chat.id, f"<pre>{res['text']}</pre>", parse_mode='HTML')
-                    if res["file"]:
-                        bot.send_document(call.message.chat.id, r.document)
+                if r and extract_text(r):
+                    bot.send_message(call.message.chat.id, f"<pre>{extract_text(r)}</pre>", parse_mode='HTML')
                 else:
-                    bot.send_message(call.message.chat.id, "❌ Timeout or No Result", reply_markup=main_menu())
+                    bot.send_message(call.message.chat.id, "❌ Timeout or No Text Result", reply_markup=main_menu())
 
     @bot.message_handler(func=lambda m: True)
     def txt(m):
@@ -222,51 +198,25 @@ try:
             r = asyncio.run_coroutine_threadsafe(send_wait("🔍 Num Lookup", m.text), loop).result()
             try: bot.delete_message(m.chat.id, msg.message_id)
             except: pass
-            if r:
-                res = extract_result(r)
-                if res["text"]:
-                    bot.send_message(m.chat.id, f"<pre>{res['text']}</pre>", parse_mode='HTML')
-                if res["file"]:
-                    bot.send_document(m.chat.id, r.document)
+            if r and extract_text(r):
+                bot.send_message(m.chat.id, f"<pre>{extract_text(r)}</pre>", parse_mode='HTML')
             else:
-                bot.send_message(m.chat.id, "❌ Timeout or No Result", reply_markup=main_menu())
+                bot.send_message(m.chat.id, "❌ Timeout or No Text Result", reply_markup=main_menu())
 
     def run_bot():
         print("🤖 Telegram Bot Started...")
-        bot.remove_webhook() 
-        time.sleep(2)
-        bot.infinity_polling(skip_pending=True)
+        bot.infinity_polling()
 
 except Exception as e:
     print("⚠️ Bot libraries error: " + str(e))
     def run_bot(): pass
     def send_wait(cmd, query): return None
-    def extract_result(msg): return {"text": "", "file": None}
+    def extract_text(msg): return ""
     MENU = [("🔍 Num Lookup", "🔍 Num Lookup", "10 Digit Mobile...")]
 
 # ================= FLASK WEB =================
 app = Flask(__name__)
 app.secret_key = "rich_secret_123_change_me"
-
-@app.route('/download/<int:chat_id>/<int:msg_id>')
-def download_file(chat_id, msg_id):
-    if 'user' not in session: 
-        return "Unauthorized", 401
-    try:
-        async def get_file():
-            msg = await client.get_messages(chat_id, ids=msg_id)
-            if msg:
-                path = await client.download_media(msg, file="static/dl_")
-                return path
-            return None
-        
-        file_path = asyncio.run_coroutine_threadsafe(get_file(), loop).result()
-        if file_path and os.path.exists(file_path):
-            ext = file_path.split('.')[-1]
-            return send_file(file_path, as_attachment=True, download_name=f"Result.{ext}")
-        return "File not found", 404
-    except Exception as e:
-        return f"Error: {e}", 500
 
 def get_bg_html():
     if os.path.exists(BG_FILE) and os.path.exists(BG_EXT_FILE):
@@ -329,125 +279,6 @@ button:hover{transform:scale(1.02);}
     <div class="link"><a href="/forgot">Forgot password?</a> <a href="/signup">Create Account</a></div>
 </div></body></html>"""
 
-DASHBOARD = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RICH OSINT</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
-body{background:#050505;color:#fff;padding:50px 15px 15px 15px;min-height:100vh;}
-
-.card{background:#111;border:1px solid #ff3333;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 0 15px rgba(255,51,51,0.1);}
-.card h1{font-size:22px;text-align:center;margin-bottom:5px;letter-spacing:2px;}
-.card h1 span{color:#ff3333;}
-.card p{text-align:center;color:#ff6600;font-size:12px;margin-bottom:20px;letter-spacing:1px;}
-.search-box{display:flex;background:#050505;border:1px solid #333;border-radius:8px;overflow:hidden;}
-.search-box input{flex:1;padding:14px;background:transparent;border:none;color:#fff;font-size:14px;outline:none;}
-.search-box button{background:linear-gradient(90deg, #ff3333, #ff6600);color:#fff;border:none;padding:0 25px;font-weight:bold;cursor:pointer;font-size:14px;}
-
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.grid button{padding:14px 5px;background:#0a0a0a;border:1px solid #333;color:#ddd;border-radius:8px;cursor:pointer;font-size:13px;font-weight:bold;transition:0.2s;}
-.grid button:hover{border-color:#ff3333;color:#fff;box-shadow:0 0 10px rgba(255,51,51,0.3);}
-
-.page-btns{display:flex;justify-content:space-between;margin-top:15px;}
-.page-btns button{background:linear-gradient(90deg, #ff3333, #ff6600);color:#fff;border:none;padding:10px 25px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;}
-
-.res-box{background:#0a0a0a;border:1px dashed #555;padding:15px;border-radius:8px;min-height:100px;white-space:pre-wrap;font-family:monospace;font-size:13px;color:#00ff66;line-height:1.5;}
-.res-box::-webkit-scrollbar{width:5px;}
-.res-box::-webkit-scrollbar-thumb{background:#ff3333;}
-
-.loader{text-align:center;color:#ff6600;font-weight:bold;animation:pulse 1s infinite;}
-@keyframes pulse{0%{opacity:0.5;}50%{opacity:1;}100%{opacity:0.5;}}
-
-.footer{text-align:center;font-size:10px;color:#555;margin-top:30px;letter-spacing:1px;}
-</style>
-<script>
-let currentPage = 0;
-const itemsPerPage = 12;
-const allMenus = """ + str([{"label": d, "cmd": a} for d, a, p in MENU]) + """;
-
-function renderMenu() {
-    let grid = document.getElementById('menu-grid');
-    let btns = document.getElementById('page-btns');
-    let start = currentPage * itemsPerPage;
-    let end = start + itemsPerPage;
-    let pageItems = allMenus.slice(start, end);
-    
-    let html = "";
-    pageItems.forEach(item => {
-        html += `<button onclick="doSearch('${item.cmd}', this)">${item.label}</button>`;
-    });
-    grid.innerHTML = html;
-    
-    let btnHtml = "";
-    if(currentPage > 0) btnHtml += `<button onclick="prevPage()">⬅ Back</button>`;
-    else btnHtml += `<div></div>`; 
-    
-    if(end < allMenus.length) btnHtml += `<button onclick="nextPage()">Next ➔</button>`;
-    
-    btns.innerHTML = btnHtml;
-}
-
-function nextPage() { currentPage++; renderMenu(); }
-function prevPage() { currentPage--; renderMenu(); }
-
-async function doSearch(cmd, btn) {
-    let val = document.getElementById('query').value;
-    if(!val) return alert('⚠️ Please enter a value to search!');
-    
-    let box = document.getElementById('result');
-    box.innerHTML = "<div class='loader'>⏳ Fetching Data from Server...</div>";
-    
-    let originalText = btn.innerHTML;
-    btn.innerHTML = "⏳";
-    btn.disabled = true;
-    
-    try {
-        let res = await fetch('/api/search', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({cmd: cmd, query: val})
-        });
-        let data = await res.json();
-        
-        if(data.status === 'success') {
-            let html = data.text ? `<div style="color:#fff;">${data.text}</div>` : '<div style="color:#888;">No text data found.</div>';
-            if(data.file) {
-                html += `<br><a href="${data.file}" target="_blank" style="display:block; text-align:center; background:linear-gradient(90deg,#00b09b,#96c93d); color:#fff; padding:12px; border-radius:8px; text-decoration:none; font-weight:bold; margin-top:10px;">📥 DOWNLOAD FILE / PDF</a>`;
-            }
-            box.innerHTML = html;
-        } else {
-            box.innerHTML = "<div style='color:#ff3333;'>❌ " + data.message + "</div>";
-        }
-    } catch(e) {
-        box.innerHTML = "<div style='color:#ff3333;'>❌ Network Error!</div>";
-    }
-    
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-}
-window.onload = renderMenu;
-</script>
-</head><body>
-
-<div class="card">
-    <h1>⚡ <span>RICH</span> OSINT ⚡</h1>
-    <p>₹100/SEARCH • FAST & SECURE</p>
-    <div class="search-box">
-        <input type="text" id="query" placeholder="Enter value (Number, Aadhaar, Vehicle)...">
-        <button onclick="doSearch('📁 Num ➔ All Info', this)">Search</button>
-    </div>
-</div>
-
-<div class="grid" id="menu-grid">
-</div>
-<div class="page-btns" id="page-btns"></div>
-
-<div class="res-box" id="result">> System Ready...<br>> Select a command and enter query to start.</div>
-
-<div class="footer">
-    POWERED BY RICH • MY REF: RICH-ADMIN1
-</div>
-
-</body></html>"""
-
 SIGNUP = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signup</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
@@ -490,76 +321,7 @@ button{width:100%;padding:14px;background: linear-gradient(90deg, #ff3333, #ff66
 .link{margin-top:15px;font-size:13px;color:#888;text-align:center;}.link a{color:#ff6600;text-decoration:none;font-weight:bold;}
 </style></head><body>
 """ + get_bg_html() + """
-<div class="box"><h2>RESET <span>PASSWORD</span></h2>
-{% if error %}<div class="error">{{error}}</div>{% endif %}
-{% if msg %}<div class="ok">{{msg}}</div>{% endif %}
+<div class="box"><h2>RESET <span>{{panel_name}}</span></h2>{% if error %}<div class="error">{{error}}</div>{% endif %}{% if ok %}<div class="ok">{{ok}}</div>{% endif %}
 <form method="POST">
-    <div class="input-group"><label>USERNAME OR MOBILE</label><input type="text" name="username" placeholder="Enter Username/Mobile" required></div>
-    <button type="submit">Reset Password 🔐</button>
-</form>
-<div class="link">Remember? <a href="/login">Login ➜</a></div></div></body></html>"""
-
-# ================= ROUTES =================
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        u = request.form.get('username')
-        p = request.form.get('password')
-        user = get_user(u)
-        if user and check_password_hash(user['password_hash'], p):
-            session['user'] = u
-            return redirect(url_for('dashboard'))
-        return render_template_string(LOGIN, panel_name="RICH", error="Invalid Credentials", has_logo=os.path.exists(LOGO_FILE), time=time.time(), tg_link=TG_HELP_ID)
-    return render_template_string(LOGIN, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time(), tg_link=TG_HELP_ID)
-
-@app.route('/')
-def dashboard():
-    if 'user' not in session: return redirect(url_for('login'))
-    return render_template_string(DASHBOARD)
-
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        u = request.form.get('username')
-        m = request.form.get('mobile')
-        p = request.form.get('password')
-        ref = request.form.get('referral')
-        
-        c = sqlite3.connect(DB)
-        if c.execute("SELECT 1 FROM users WHERE username=?", (u,)).fetchone():
-            c.close()
-            return render_template_string(SIGNUP, panel_name="RICH", error="Username already exists!", has_logo=os.path.exists(LOGO_FILE), time=time.time())
-        
-        code = gen_ref()
-        c.execute("INSERT INTO users(name,username,mobile,password_hash,raw_password,referral_code,referred_by,wallet,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                  (name, u, m, generate_password_hash(p), p, code, ref, SIGNUP_BONUS, datetime.now().isoformat()))
-        c.commit(); c.close()
-        return redirect(url_for('login'))
-    return render_template_string(SIGNUP, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time())
-
-@app.route('/forgot', methods=['GET', 'POST'])
-def forgot():
-    if request.method == 'POST':
-        return render_template_string(FORGOT, panel_name="RICH", error="Please contact @MrRichYT for password reset.", has_logo=os.path.exists(LOGO_FILE), time=time.time())
-    return render_template_string(FORGOT, panel_name="RICH", has_logo=os.path.exists(LOGO_FILE), time=time.time())
-
-@app.route('/api/search', methods=['POST'])
-def api_search():
-    if 'user' not in session: 
-        return {"status": "error", "message": "Unauthorized"}
-    
-    data = request.json
-    cmd = data.get('cmd')
-    query = data.get('query')
-    
-    with lock:
-        r = asyncio.run_coroutine_threadsafe(send_wait(cmd, query), loop).result()
-        if r:
-            res = extract_result(r)
-            return {"status": "success", "text": res["text"], "file": res["file"]}
-        return {"status": "error", "message": "Timeout or Target Bot didn't respond."}
-
-if __name__ == '__main__':
-    threading.Thread(target=run_bot, daemon=True).start()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    <div class="input-group"><label>USERNAME</label><input type="text" name="username" placeholder="Your Username" required></div>
+    <div class="input-
