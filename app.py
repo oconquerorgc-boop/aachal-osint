@@ -14,11 +14,11 @@ except ImportError:
 # ================= CONFIG =================
 API_ID = 37325833
 API_HASH = '8d82b6543b9631209aebf4b5e03409fc'
-SESSION_STR = '1BVtsOHUBu8J5LUCLkS6vRb7Sn86yjfPWuaWejjvfWClLLgvvdptBpa0lNXwg0RPO5yn5Wh61VgXy_UBEWX5jeXcWOnEu2CqXCkvjierGj730SpMwoSCzGi35phwBAayzzvXNcL-OXoDugc28Wfop-FkgTaHItalB4gObWpbST748Il6GJ4YXKKa8Gsrw9uavs_tJB8rCqOr31B0JdOBMn5szfBBnx2dLF6fArrZ3CSv1QSmE2UkhDm--qFPP4uc5Ytet5HT-k7BW5JDzHC7xcRVtweNr_T45-gVASzzXXxzaBnJCIeN7AWPn-KuQJvn3W8niq54TZf4fCWYD8-u9PDF9d1VNraI='
+SESSION_STR = '1BVtsOMMBu2tX6Ow4MSJrDU2FdzE4mWMJ3YIzpbl4SNceVpzf6v2tbkhwhuRzCwol_JnofJTw9z2bgPjRuEM4DI3Sa8ds6iAMhWZRl_pZWYbjpq4qgif3Oku5INJM_0MN6Dgamx4K4HuR88tsVIH63KdsLUgb8NatAurhzJP0kKPuwaWD6cbQKaomQgJ2T2C7gUE6s4fBPx4Vv4xKH4JNwIqeaZUourfibPvLjQ5XWxyhfe7N7iI-IBuHRq5lsagdDYcPxfuHKn9sPqRmsX8TCV_lsdZpv8OUNhJ6FvpHGWbPd5npRW0Wu6N_7TA3iYrWVodUTtg3Ql2OwfxxJfdVjlOoW2qaRc0='
 TARGET_BOT = '@Osint2_info_bot'
-BOT_TOKEN = '9249884434:AAFIQieRI5vaydKvHRI6IC2PTeMpOm0q4pA'
+BOT_TOKEN = '8666312234:AAHBQ1dt2yPElbpASleamyaJydvuhwU7B2o'
 WEB_USER = "RICH"
-WEB_PASS = "DK124421"
+WEB_PASS = "Ravi124421"
 SEARCH_COST = 100
 SIGNUP_BONUS = 50
 REFERRAL_BONUS = 100
@@ -132,7 +132,7 @@ try:
         if not msg: return ""
         return msg.raw_text or msg.text or ""
 
-    # ✅ File & Text Extraction (Update for PDF/Photo)
+    # ✅ File & Text Extraction
     def extract_result(msg):
         if not msg: return {"text": "", "file": None}
         text = extract_text(msg)
@@ -235,13 +235,10 @@ try:
                 bot.send_message(m.chat.id, "❌ Timeout or No Result", reply_markup=main_menu())
 
     def run_bot():
-        try:
-            bot.remove_webhook() # Fix 409 Conflict
-            time.sleep(2)
-            print("🤖 Telegram Bot Started...")
-            bot.infinity_polling(skip_pending=True)
-        except Exception as e:
-            print("Bot Error:", e)
+        print("🤖 Telegram Bot Started...")
+        bot.remove_webhook() 
+        time.sleep(2)
+        bot.infinity_polling(skip_pending=True)
 
 except Exception as e:
     print("⚠️ Bot libraries error: " + str(e))
@@ -336,18 +333,17 @@ button:hover{transform:scale(1.02);}
     <div class="link"><a href="/forgot">Forgot password?</a> <a href="/signup">Create Account</a></div>
 </div></body></html>"""
 
-# ✅ UPDATED DASHBOARD (Owner Control, No Redeem Code, Animation & Download Fix)
+# ✅ UPDATED DASHBOARD (Top Space Added + Owner Control + PDF Fix)
 DASHBOARD = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RICH OSINT</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
 
-/* 👇 Yahan padding-top: 80px; add kiya hai taaki upar premium space aaye */
 body{background:#050505;color:#fff;padding:80px 15px 15px 15px;min-height:100vh;}
 
 /* Top Bar */
 .top-bar{display:flex;align-items:center;justify-content:space-between;background:#111;border:1px solid #ff3333;padding:10px 15px;border-radius:12px;margin-bottom:20px;box-shadow:0 0 15px rgba(255,51,51,0.2);}
-.profile-pic{width:45px;height:45px;border-radius:50%;border:2px solid #ff3333;object-fit:cover;}
-.owner-badge{background:linear-gradient(90deg, #ff3333, #ff6600);color:#fff;padding:8px 20px;border-radius:30px;font-weight:900;font-size:14px;letter-spacing:1px;display:flex;align-items:center;gap:5px;box-shadow:0 0 15px rgba(255,102,0,0.5);}
+.profile-pic{width:45px;height:45px;border-radius:50%;border:2px solid #ff3333;object-fit:cover;background:#222;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px;color:#ff3333;}
+.owner-badge{background:linear-gradient(90deg, #ff3333, #ff6600);color:#fff;padding:8px 15px;border-radius:30px;font-weight:900;font-size:12px;letter-spacing:1px;display:flex;align-items:center;gap:5px;box-shadow:0 0 15px rgba(255,102,0,0.5);white-space:nowrap;}
 .tg-btn{width:40px;height:40px;border-radius:50%;background:#229ED9;display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-weight:bold;}
 
 /* Main Card */
@@ -417,7 +413,8 @@ async function doSearch(cmd, btn) {
 
 <!-- 🔴 TOP BAR: OWNER CONTROL 🔴 -->
 <div class="top-bar">
-    <img src="/static/custom_logo.jpg" class="profile-pic" onerror="this.src='https://ui-avatars.com/api/?name=Rich&background=ff3333&color=fff'">
+    <img src="/static/custom_logo.jpg" class="profile-pic" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Logo">
+    <div class="profile-pic" style="display:none;">RI</div>
     
     <div class="owner-badge">
         👑 OWNER CONTROL
@@ -490,11 +487,13 @@ h2{color:#fff;margin-bottom:20px;text-align:center;letter-spacing:2px;} h2 span{
 .input-group input:focus{border-color:#ff3333;outline:none;}
 button{width:100%;padding:14px;background: linear-gradient(90deg, #ff3333, #ff6600);color:#fff;font-weight:900;border:none;border-radius:8px;cursor:pointer;font-size:15px;margin-top:10px;}
 .error{color:#f33;font-size:13px;margin-bottom:10px;text-align:center;background:rgba(255,0,0,0.1);padding:8px;border-radius:5px;}
+.ok{color:#00e676;font-size:13px;margin-bottom:10px;text-align:center;background:rgba(0,255,102,0.1);padding:8px;border-radius:5px;}
 .link{margin-top:15px;font-size:13px;color:#888;text-align:center;}.link a{color:#ff6600;text-decoration:none;font-weight:bold;}
 </style></head><body>
 """ + get_bg_html() + """
 <div class="box"><h2>RESET <span>PASSWORD</span></h2>
 {% if error %}<div class="error">{{error}}</div>{% endif %}
+{% if msg %}<div class="ok">{{msg}}</div>{% endif %}
 <form method="POST">
     <div class="input-group"><label>USERNAME OR MOBILE</label><input type="text" name="username" placeholder="Enter Username/Mobile" required></div>
     <button type="submit">Reset Password 🔐</button>
